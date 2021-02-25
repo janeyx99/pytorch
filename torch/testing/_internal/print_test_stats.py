@@ -5,6 +5,7 @@ import datetime
 import json
 import math
 import os
+import re
 import statistics
 import subprocess
 import time
@@ -577,22 +578,41 @@ class TestSuite:
         print("")
 
 
+class TestFile:
+    def __init__(self, name: str) -> None:
+        self.filename = name
+        self.test_suites: Dict[str, TestSuite] = dict()
+        self.total_time = 0.0
+
+    def append(self, test_case: TestCase) -> None:
+        suite_name = test_case.class_name
+        if suite_name not in self.test_suites:
+            self.test_suites[suite_name] = TestSuite(suite_name)
+        self.test_suites[suite_name].append(test_case)
+        self.total_time += test_case.time
+
+
 def parse_report(path: str) -> Iterator[TestCase]:
     dom = minidom.parse(path)
     for test_case in dom.getElementsByTagName('testcase'):
         yield TestCase(test_case)
 
 
-def parse_reports(folder: str) -> Dict[str, TestSuite]:
+def parse_reports(folder: str) -> Tuple(Dict[str, TestFile], Dict[str, TestSuite]):
     reports = glob(os.path.join(folder, '**', '*.xml'), recursive=True)
+    tests_by_file = dict()
     tests_by_class = dict()
     for report in reports:
+        test_filename = re.sub(r'\.', '/', os.path.basename(os.path.dirname(report)))
         for test_case in parse_report(report):
             class_name = test_case.class_name
+            if test_filename not in tests_by_file:
+                tests_by_file[test_filename] = TestFile(test_filename)
+            tests_by_file[test_filename].append(test_case)
             if class_name not in tests_by_class:
                 tests_by_class[class_name] = TestSuite(class_name)
             tests_by_class[class_name].append(test_case)
-    return tests_by_class
+    return tests_by_file, tests_by_class
 
 
 def build_info() -> ReportMeta:
@@ -830,7 +850,7 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
 
-    reports = parse_reports(args.folder)
+    reports_by_file, reports = parse_reports(args.folder)
     if len(reports) == 0:
         print(f"No test reports found in {args.folder}")
         sys.exit(0)
