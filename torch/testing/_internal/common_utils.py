@@ -760,6 +760,16 @@ try:
 except ImportError:
     print('Fail to import hypothesis in common_utils, tests are not derandomized')
 
+
+def check_slow_test_from_S3(test):
+    getattr(test, test._testMethodName).__dict__['slow_test'] = True
+    print(f'Test method name is: {test._testMethodName}')
+    print(f'Test module is: {test.__module__}')
+    print(f'Test class is: {test.__class__}')
+    print('its dict looks like:')
+    print(getattr(test, test._testMethodName).__dict__)
+
+
 disabled_test_from_issues: Optional[Dict[str, Any]] = None
 def check_disabled(test_name):
     global disabled_test_from_issues
@@ -904,13 +914,13 @@ class TestCase(expecttest.TestCase):
 
     def setUp(self):
 
+        check_slow_test_from_S3(self)
+        # if TEST_SKIP_FAST:
+        #     if not getattr(self, self._testMethodName).__dict__.get('slow_test', False):
+        #         raise unittest.SkipTest("test is fast; we disabled it with PYTORCH_TEST_SKIP_FAST")
+        # check_disabled(str(self))
 
-        if TEST_SKIP_FAST:
-            if not getattr(self, self._testMethodName).__dict__.get('slow_test', False):
-                raise unittest.SkipTest("test is fast; we disabled it with PYTORCH_TEST_SKIP_FAST")
-        check_disabled(str(self))
-
-        set_rng_seed(SEED)
+        # set_rng_seed(SEED)
 
     def genSparseTensor(self, size, sparse_dim, nnz, is_uncoalesced, device='cpu'):
         # Assert not given impossible combination, where the sparse dims have
