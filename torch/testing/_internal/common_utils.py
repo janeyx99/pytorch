@@ -1384,8 +1384,11 @@ except ImportError:
     print('Fail to import hypothesis in common_utils, tests are not derandomized')
 
 def check_if_enable(test: unittest.TestCase):
+    print("I AM CALLED!!!!")
     test_suite = str(test.__class__).split('\'')[1]
     test_name = f'{test._testMethodName} ({test_suite})'
+    print(test_name)
+    return False
     if slow_tests_dict is not None and test_name in slow_tests_dict:
         getattr(test, test._testMethodName).__dict__['slow_test'] = True
         if not TEST_WITH_SLOW:
